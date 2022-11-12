@@ -30,6 +30,14 @@ const createUser = (req, res) => {
     .catch((err) => {
       console.log(err);
       if (err.name === 'ValidationError') {
+        if (!name) {
+          res.status(400).send({ message: 'Поле Name не должно быть пустым!' });
+          return;
+        }
+        if (!about) {
+          res.status(400).send({ message: 'Поле About не должно быть пустым!' });
+          return;
+        }
         if (name.length < 2 || name.length > 30) {
           res.status(400).send({ message: 'Переданы невалидные данные поля Name.Значениe должно не менее 2 символов и не более 30' });
           return;
@@ -61,6 +69,14 @@ const updateUser = (req, res) => {
     .catch((err) => {
       console.log(err);
       if (err.name === 'ValidationError') {
+        if (!name) {
+          res.status(400).send({ message: 'Поле Name не должно быть пустым!' });
+          return;
+        }
+        if (!about) {
+          res.status(400).send({ message: 'Поле About не должно быть пустым!' });
+          return;
+        }
         if (name.length < 2 || name.length > 30) {
           res.status(400).send({ message: 'Переданы невалидные данные поля Name.Значениe должно не менее 2 символов и не более 30' });
           return;
@@ -90,7 +106,7 @@ const updateAvatar = (req, res) => {
     .catch((err) => {
       console.log(err);
       if (err.name === 'ValidationError') {
-        res.status(400).send({ message: `Переданы неккоректные данные ${err.message}` });
+        res.status(400).send({ message: 'переданы некорректные данные в метод' });
         return;
       }
       res.status(500).send({ message: 'Упс!На сервере произошла ошибка!' });
