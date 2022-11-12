@@ -31,5 +31,5 @@ app.use('/', routerCards);
 app.use('/', routerMain);
 
 app.listen(PORT, () => {
-  console.log(`Запустили сервер на  ${PORT} порту`);
+  console.log(`Запустили сервер на ${PORT} порту`);
 });
