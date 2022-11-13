@@ -1,15 +1,21 @@
 const Card = require('../models/card');
 
-const SERVER_ERROR = 'На сервере произошла ошибка';
-const INVALID_ID = 'Неккоректный id';
-const MISSING_CARD = 'Нет карточки с таким id';
-const INVALID_DATA = 'Переданы некорректные данные';
+const {
+  SERVER_ERROR,
+  RESOURCE_NOT_FOUND,
+  BAD_REQUEST,
+  CREATED,
+  INVALID_ID,
+  INVALID_DATA,
+  SERVER_ERROR_MESSAGE,
+  MISSING_CARD,
+} = require('../constants/constants');
 
 const getCards = (req, res) => {
   Card.find({})
     .populate(['owner', 'likes'])
     .then((data) => res.send(data))
-    .catch(() => res.status(500).send({ message: SERVER_ERROR }));
+    .catch(() => res.status(SERVER_ERROR).send({ message: SERVER_ERROR_MESSAGE }));
 };
 
 const createCard = (req, res) => {
@@ -20,15 +26,15 @@ const createCard = (req, res) => {
   Card.create({
     name, link, likes, owner: _id,
   })
-    .then((card) => res.status(201).send({ data: card }))
+    .then((card) => res.status(CREATED).send({ data: card }))
     .catch((err) => {
       if (err.name === 'ValidationError') {
         res
-          .status(400)
+          .status(BAD_REQUEST)
           .send({ message: INVALID_DATA });
         return;
       }
-      res.status(500).send({ message: SERVER_ERROR });
+      res.status(SERVER_ERROR).send({ message: SERVER_ERROR_MESSAGE });
     });
 };
 
@@ -36,15 +42,15 @@ const deleteCard = (req, res) => {
   Card.findByIdAndRemove(req.params.cardId)
     .then((card) => {
       if (!card) {
-        return res.status(404).send({ message: MISSING_CARD });
+        return res.status(RESOURCE_NOT_FOUND).send({ message: MISSING_CARD });
       }
       return res.send(card);
     })
     .catch((err) => {
       if (err.name === 'CastError') {
-        res.status(400).send({ message: INVALID_ID });
+        res.status(BAD_REQUEST).send({ message: INVALID_ID });
       } else {
-        res.status(500).send({ message: SERVER_ERROR });
+        res.status(SERVER_ERROR).send({ message: SERVER_ERROR_MESSAGE });
       }
     });
 };
@@ -56,15 +62,15 @@ const likeCard = (req, res) => Card.findByIdAndUpdate(
 )
   .then((card) => {
     if (!card) {
-      return res.status(404).send({ message: MISSING_CARD });
+      return res.status(RESOURCE_NOT_FOUND).send({ message: MISSING_CARD });
     }
     return res.send(card);
   })
   .catch((err) => {
     if (err.name === 'CastError') {
-      res.status(400).send({ message: INVALID_ID });
+      res.status(BAD_REQUEST).send({ message: INVALID_ID });
     } else {
-      res.status(500).send({ message: SERVER_ERROR });
+      res.status(SERVER_ERROR).send({ message: SERVER_ERROR_MESSAGE });
     }
   });
 
@@ -75,15 +81,15 @@ const dislikeCard = (req, res) => Card.findByIdAndUpdate(
 )
   .then((card) => {
     if (!card) {
-      return res.status(404).send({ message: MISSING_CARD });
+      return res.status(RESOURCE_NOT_FOUND).send({ message: MISSING_CARD });
     }
     return res.send(card);
   })
   .catch((err) => {
     if (err.name === 'CastError') {
-      res.status(400).send({ message: INVALID_ID });
+      res.status(BAD_REQUEST).send({ message: INVALID_ID });
     } else {
-      res.status(500).send({ message: SERVER_ERROR });
+      res.status(SERVER_ERROR).send({ message: SERVER_ERROR_MESSAGE });
     }
   });
 
