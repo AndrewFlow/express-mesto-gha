@@ -1,13 +1,15 @@
 const Card = require('../models/card');
-const {
-  serverError, invalidId, missingCard, invalidData,
-} = require('../constants/constants');
+
+const SERVER_ERROR = 'На сервере произошла ошибка';
+const INVALID_ID = 'Неккоректный id';
+const MISSING_CARD = 'Нет карточки с таким id';
+const INVALID_DATA = 'Переданы некорректные данные';
 
 const getCards = (req, res) => {
   Card.find({})
     .populate(['owner', 'likes'])
     .then((data) => res.send(data))
-    .catch(() => res.status(500).send({ message: serverError }));
+    .catch(() => res.status(500).send({ message: SERVER_ERROR }));
 };
 
 const createCard = (req, res) => {
@@ -23,10 +25,10 @@ const createCard = (req, res) => {
       if (err.name === 'ValidationError') {
         res
           .status(400)
-          .send({ message: invalidData });
+          .send({ message: INVALID_DATA });
         return;
       }
-      res.status(500).send({ message: serverError });
+      res.status(500).send({ message: SERVER_ERROR });
     });
 };
 
@@ -34,15 +36,15 @@ const deleteCard = (req, res) => {
   Card.findByIdAndRemove(req.params.cardId)
     .then((card) => {
       if (!card) {
-        return res.status(404).send({ message: missingCard });
+        return res.status(404).send({ message: MISSING_CARD });
       }
       return res.send(card);
     })
     .catch((err) => {
       if (err.name === 'CastError') {
-        res.status(400).send({ message: invalidId });
+        res.status(400).send({ message: INVALID_ID });
       } else {
-        res.status(500).send({ message: serverError });
+        res.status(500).send({ message: SERVER_ERROR });
       }
     });
 };
@@ -54,15 +56,15 @@ const likeCard = (req, res) => Card.findByIdAndUpdate(
 )
   .then((card) => {
     if (!card) {
-      return res.status(404).send({ message: missingCard });
+      return res.status(404).send({ message: MISSING_CARD });
     }
     return res.send(card);
   })
   .catch((err) => {
     if (err.name === 'CastError') {
-      res.status(400).send({ message: invalidId });
+      res.status(400).send({ message: INVALID_ID });
     } else {
-      res.status(500).send({ message: serverError });
+      res.status(500).send({ message: SERVER_ERROR });
     }
   });
 
@@ -73,15 +75,15 @@ const dislikeCard = (req, res) => Card.findByIdAndUpdate(
 )
   .then((card) => {
     if (!card) {
-      return res.status(404).send({ message: missingCard });
+      return res.status(404).send({ message: MISSING_CARD });
     }
     return res.send(card);
   })
   .catch((err) => {
     if (err.name === 'CastError') {
-      res.status(400).send({ message: invalidId });
+      res.status(400).send({ message: INVALID_ID });
     } else {
-      res.status(500).send({ message: serverError });
+      res.status(500).send({ message: SERVER_ERROR });
     }
   });
 
