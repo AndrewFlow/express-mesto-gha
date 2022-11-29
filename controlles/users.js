@@ -17,10 +17,14 @@ const {
 } = require('../constants/constants');
 const Duplicate = require('../errors/Duplicate');
 
-const getAllUsers = (req, res) => {
+const getAllUsers = (req, res, next) => {
   User.find({})
-    .then((data) => res.send(data))
-    .catch(() => res.status(SERVER_ERROR).send({ message: SERVER_ERROR_MESSAGE }));
+    .then((users) => {
+      if (!users) {
+        return next(new ResourceNotFound(RESOURCE_NOT_FOUND_MESSAGE));
+      } return res.send(users);
+    })
+    .catch(next);
 };
 
 const getMyInfo = (req, res, next) => {
