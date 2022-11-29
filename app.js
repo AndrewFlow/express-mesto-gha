@@ -1,9 +1,12 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
+const cookieParser = require('cookie-parser');
 const routerUsers = require('./routes/users');
 const routerCards = require('./routes/cards');
 const routerMain = require('./routes/main');
+const { login, createUser } = require('./controlles/users');
+const auth = require('./middlewares/auth');
 
 const app = express();
 
@@ -15,16 +18,15 @@ mongoose.connect('mongodb://localhost:27017/mestodb', {
   console.log('Подключение к Mongo установлено');
 });
 
-app.use((req, res, next) => {
-  req.user = {
-    _id: '636e29b8972b9032053e4903',
-  };
-  next();
-});
-
 const { PORT = 3000 } = process.env;
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+app.post('/signup', createUser);
+app.post('/signin', login);
+
+app.use(auth);
 
 app.use('/', routerUsers);
 app.use('/', routerCards);

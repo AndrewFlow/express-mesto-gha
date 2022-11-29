@@ -2,6 +2,8 @@ const CREATED = 201;
 const SERVER_ERROR = 500;
 const RESOURCE_NOT_FOUND = 404;
 const BAD_REQUEST = 400;
+const UNAUTHORIZED = 401;
+const FORBIDDEN = 403;
 
 const INVALID_ID = 'Неккоректный id';
 const INVALID_DATA = 'Переданы некорректные данные';
@@ -11,6 +13,7 @@ const INVALID_FIELD = 'Переданы некорректные данные .�
 const SERVER_ERROR_MESSAGE = 'На сервере произошла ошибка';
 const MISSING_CARD = 'Нет карточки с таким id';
 const RESOURCE_NOT_FOUND_MESSAGE = 'Ресурс не найден';
+const UNAUTHORIZED_MESSAGE = 'Необходима авторизация';
 
 module.exports = {
   SERVER_ERROR,
@@ -25,4 +28,7 @@ module.exports = {
   SERVER_ERROR_MESSAGE,
   MISSING_CARD,
   RESOURCE_NOT_FOUND_MESSAGE,
+  UNAUTHORIZED,
+  UNAUTHORIZED_MESSAGE,
+  FORBIDDEN,
 };

@@ -2,13 +2,11 @@ const Card = require('../models/card');
 
 const {
   SERVER_ERROR,
-  RESOURCE_NOT_FOUND,
   BAD_REQUEST,
   CREATED,
   INVALID_ID,
   INVALID_DATA,
   SERVER_ERROR_MESSAGE,
-  MISSING_CARD,
 } = require('../constants/constants');
 
 const getCards = (req, res) => {
@@ -40,9 +38,10 @@ const createCard = (req, res) => {
 
 const deleteCard = (req, res) => {
   Card.findByIdAndRemove(req.params.cardId)
+    .orFail()
     .then((card) => {
-      if (!card) {
-        return res.status(RESOURCE_NOT_FOUND).send({ message: MISSING_CARD });
+      if (card.owner.toString() !== req.user._id) {
+        return res.status(403).send({ message: 'Нельзя удалить чужую карточку' });
       }
       return res.send(card);
     })
@@ -60,12 +59,8 @@ const likeCard = (req, res) => Card.findByIdAndUpdate(
   { $addToSet: { likes: req.user._id } },
   { new: true },
 )
-  .then((card) => {
-    if (!card) {
-      return res.status(RESOURCE_NOT_FOUND).send({ message: MISSING_CARD });
-    }
-    return res.send(card);
-  })
+  .orFail()
+  .then((card) => res.send(card))
   .catch((err) => {
     if (err.name === 'CastError') {
       res.status(BAD_REQUEST).send({ message: INVALID_ID });
@@ -79,12 +74,8 @@ const dislikeCard = (req, res) => Card.findByIdAndUpdate(
   { $pull: { likes: req.user._id } },
   { new: true },
 )
-  .then((card) => {
-    if (!card) {
-      return res.status(RESOURCE_NOT_FOUND).send({ message: MISSING_CARD });
-    }
-    return res.send(card);
-  })
+  .orFail()
+  .then((card) => res.send(card))
   .catch((err) => {
     if (err.name === 'CastError') {
       res.status(BAD_REQUEST).send({ message: INVALID_ID });
