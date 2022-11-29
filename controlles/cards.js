@@ -1,12 +1,15 @@
 const Card = require('../models/card');
 
+const BadRequest = require('../errors/BadRequest');
+const ServerError = require('../errors/ServerError');
+const Forbidden = require('../errors/Forbidden');
+
 const {
   SERVER_ERROR,
-  BAD_REQUEST,
   CREATED,
-  INVALID_ID,
   INVALID_DATA,
   SERVER_ERROR_MESSAGE,
+  FORBIDDEN_MESSAGE,
 } = require('../constants/constants');
 
 const getCards = (req, res) => {
@@ -16,7 +19,7 @@ const getCards = (req, res) => {
     .catch(() => res.status(SERVER_ERROR).send({ message: SERVER_ERROR_MESSAGE }));
 };
 
-const createCard = (req, res) => {
+const createCard = (req, res, next) => {
   const { _id } = req.user;
   const {
     name, link, likes,
@@ -27,61 +30,52 @@ const createCard = (req, res) => {
     .then((card) => res.status(CREATED).send({ data: card }))
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        res
-          .status(BAD_REQUEST)
-          .send({ message: INVALID_DATA });
-        return;
-      }
-      res.status(SERVER_ERROR).send({ message: SERVER_ERROR_MESSAGE });
+        next(new BadRequest(INVALID_DATA));
+      } next(err);
+      next(new ServerError(SERVER_ERROR_MESSAGE));
     });
 };
 
-const deleteCard = (req, res) => {
+const deleteCard = (req, res, next) => {
   Card.findByIdAndRemove(req.params.cardId)
-    .orFail()
     .then((card) => {
       if (card.owner.toString() !== req.user._id) {
-        return res.status(403).send({ message: 'Нельзя удалить чужую карточку' });
+        next(new Forbidden(FORBIDDEN_MESSAGE));
       }
       return res.send(card);
     })
     .catch((err) => {
       if (err.name === 'CastError') {
-        res.status(BAD_REQUEST).send({ message: INVALID_ID });
-      } else {
-        res.status(SERVER_ERROR).send({ message: SERVER_ERROR_MESSAGE });
-      }
+        next(new BadRequest(INVALID_DATA));
+      } next(err);
+      next(new ServerError(SERVER_ERROR_MESSAGE));
     });
 };
 
-const likeCard = (req, res) => Card.findByIdAndUpdate(
+const likeCard = (req, res, next) => Card.findByIdAndUpdate(
   req.params.cardId,
   { $addToSet: { likes: req.user._id } },
   { new: true },
 )
-  .orFail()
   .then((card) => res.send(card))
   .catch((err) => {
     if (err.name === 'CastError') {
-      res.status(BAD_REQUEST).send({ message: INVALID_ID });
-    } else {
-      res.status(SERVER_ERROR).send({ message: SERVER_ERROR_MESSAGE });
-    }
+      next(new BadRequest(INVALID_DATA));
+    } next(err);
+    next(new ServerError(SERVER_ERROR_MESSAGE));
   });
 
-const dislikeCard = (req, res) => Card.findByIdAndUpdate(
+const dislikeCard = (req, res, next) => Card.findByIdAndUpdate(
   req.params.cardId,
   { $pull: { likes: req.user._id } },
   { new: true },
 )
-  .orFail()
   .then((card) => res.send(card))
   .catch((err) => {
     if (err.name === 'CastError') {
-      res.status(BAD_REQUEST).send({ message: INVALID_ID });
-    } else {
-      res.status(SERVER_ERROR).send({ message: SERVER_ERROR_MESSAGE });
-    }
+      next(new BadRequest(INVALID_DATA));
+    } next(err);
+    next(new ServerError(SERVER_ERROR_MESSAGE));
   });
 
 module.exports = {

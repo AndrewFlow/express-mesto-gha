@@ -1,6 +1,10 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
+const BadRequest = require('../errors/BadRequest');
+const Unauthorized = require('../errors/Unauthorized');
+const ResourceNotFound = require('../errors/ResourceNotFound');
+const ServerError = require('../errors/ServerError');
 
 const {
   SERVER_ERROR,
@@ -8,11 +12,10 @@ const {
   CREATED,
   INVALID_ID,
   INVALID_DATA,
-  EMPTY_FIELD,
-  INVALID_FIELD,
   SERVER_ERROR_MESSAGE,
-  UNAUTHORIZED,
+  RESOURCE_NOT_FOUND_MESSAGE,
 } = require('../constants/constants');
+const Duplicate = require('../errors/Duplicate');
 
 const getAllUsers = (req, res) => {
   User.find({})
@@ -20,10 +23,12 @@ const getAllUsers = (req, res) => {
     .catch(() => res.status(SERVER_ERROR).send({ message: SERVER_ERROR_MESSAGE }));
 };
 
-const getMyInfo = (req, res) => {
-  User.findById(req.user._id).orFail()
+const getMyInfo = (req, res, next) => {
+  User.findById(req.user._id)
     .then((user) => {
-      res.send(user);
+      if (user == null) {
+        return next(new ResourceNotFound(RESOURCE_NOT_FOUND_MESSAGE));
+      } return res.send(user);
     })
     .catch((err) => {
       if (err.name === 'ValidationError') {
@@ -38,22 +43,19 @@ const getMyInfo = (req, res) => {
     });
 };
 
-const getUser = (req, res) => {
-  User.findById(req.params.id).orFail()
+const getUser = (req, res, next) => {
+  User.findById(req.params.id)
     .then((user) => {
+      if (user == null) {
+        next(new ResourceNotFound(INVALID_DATA));
+      }
       res.send(user);
     })
-    .catch((err) => {
-      if (err.name === 'CastError') {
-        res.status(BAD_REQUEST).send({ message: INVALID_ID });
-      } else {
-        res.status(SERVER_ERROR).send({ message: SERVER_ERROR_MESSAGE });
-      }
-    });
+    .catch(next);
 };
 
 // eslint-disable-next-line consistent-return
-const createUser = (req, res) => {
+const createUser = (req, res, next) => {
   const {
     name, about, avatar, email, password,
   } = req.body;
@@ -76,101 +78,63 @@ const createUser = (req, res) => {
     }))
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        if (!name) {
-          res.status(BAD_REQUEST).send({ message: EMPTY_FIELD });
-          return;
-        }
-        if (!about) {
-          res.status(BAD_REQUEST).send({ message: EMPTY_FIELD });
-          return;
-        }
-        if (name.length < 2 || name.length > 30) {
-          res.status(BAD_REQUEST).send({ message: INVALID_FIELD });
-          return;
-        }
-        if (about.length < 2 || about.length > 30) {
-          res.status(BAD_REQUEST).send({ message: INVALID_FIELD });
-          return;
-        }
+        next(new BadRequest(INVALID_DATA));
       }
-      if (err.name === 'CastError') {
-        res.status(BAD_REQUEST).send({ message: INVALID_ID });
-        return;
+      if (err.code === 11000) {
+        next(new Duplicate('Имейл уже зарегестрирован'));
       }
-      res.status(SERVER_ERROR).send({ message: SERVER_ERROR_MESSAGE });
+      if (err.name === 'ServerError') {
+        next(new ServerError(SERVER_ERROR_MESSAGE));
+      }
     });
 };
 
-const login = (req, res) => {
+const login = (req, res, next) => {
   const { email, password } = req.body;
   return User.findUserByCredentials(email, password)
     .then((user) => {
-      const token = jwt.sign({ _id: user._id }, 'super-strong-secret', { expiresIn: '7d' });
-      res.cookie('jwt', token, {
-        maxAge: 604800,
-        httpOnly: true,
-        sameSite: true,
-      });
-      res.send({ token });
+      if (user === null) {
+        throw new Unauthorized(INVALID_DATA);
+      } return bcrypt.compare(password, user.password)
+        .then((matched) => {
+          if (!matched) {
+            throw new Unauthorized(INVALID_DATA);
+          } const token = jwt.sign({ _id: user._id }, 'super-strong-secret', { expiresIn: '7d' });
+          res.cookie('jwt', token, {
+            maxAge: 604800,
+            httpOnly: true,
+            sameSite: true,
+          });
+          res.send({ token });
+        });
     })
-    .catch((err) => {
-      res
-        .status(UNAUTHORIZED)
-        .send({ message: err.message });
-    });
+    .catch(next);
 };
 
-const updateUser = (req, res) => {
+const updateUser = (req, res, next) => {
   const { _id } = req.user;
   const { name, about } = req.body;
   User.findByIdAndUpdate(_id, { name, about }, { new: true, runValidators: true })
-    .orFail()
     .then((user) => res.send(user))
     .catch((err) => {
-      if (err.name === 'ValidationError') {
-        if (!name) {
-          res.status(BAD_REQUEST).send({ message: EMPTY_FIELD });
-          return;
-        }
-        if (!about) {
-          res.status(BAD_REQUEST).send({ message: EMPTY_FIELD });
-          return;
-        }
-        if (name.length < 2 || name.length > 30) {
-          res.status(BAD_REQUEST).send({ message: INVALID_FIELD });
-          return;
-        }
-        if (about.length < 2 || about.length > 30) {
-          res.status(BAD_REQUEST).send({ message: INVALID_FIELD });
-          return;
-        }
-        res.status(BAD_REQUEST).send({ message: INVALID_DATA });
-        return;
+      if (err.name === 'ValidationError' || err.name === 'CastError') {
+        next(new BadRequest(INVALID_DATA));
       }
-      if (err.name === 'CastError') {
-        res.status(BAD_REQUEST).send({ message: INVALID_ID });
-        return;
+      if (err.name === 'ServerError') {
+        next(new ServerError(SERVER_ERROR_MESSAGE));
       }
-      res.status(SERVER_ERROR).send({ message: SERVER_ERROR_MESSAGE });
     });
 };
 
-const updateAvatar = (req, res) => {
+const updateAvatar = (req, res, next) => {
   const { _id } = req.user;
   const { avatar } = req.body;
   User.findByIdAndUpdate(_id, { avatar }, { new: true, runValidators: true })
-    .orFail()
     .then((user) => res.send(user))
     .catch((err) => {
-      if (err.name === 'ValidationError') {
-        res.status(BAD_REQUEST).send({ message: INVALID_DATA });
-        return;
-      }
-      if (err.name === 'CastError') {
-        res.status(BAD_REQUEST).send({ message: INVALID_ID });
-        return;
-      }
-      res.status(SERVER_ERROR).send({ message: SERVER_ERROR_MESSAGE });
+      if (err.name === 'ValidationError' || err.name === 'CastError') {
+        next(new BadRequest(INVALID_DATA));
+      } next(err);
     });
 };
 

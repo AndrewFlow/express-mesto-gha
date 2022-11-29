@@ -14,6 +14,7 @@ const SERVER_ERROR_MESSAGE = 'На сервере произошла ошибк�
 const MISSING_CARD = 'Нет карточки с таким id';
 const RESOURCE_NOT_FOUND_MESSAGE = 'Ресурс не найден';
 const UNAUTHORIZED_MESSAGE = 'Необходима авторизация';
+const FORBIDDEN_MESSAGE = 'Ошибка доступа';
 
 module.exports = {
   SERVER_ERROR,
@@ -31,4 +32,5 @@ module.exports = {
   UNAUTHORIZED,
   UNAUTHORIZED_MESSAGE,
   FORBIDDEN,
+  FORBIDDEN_MESSAGE,
 };
