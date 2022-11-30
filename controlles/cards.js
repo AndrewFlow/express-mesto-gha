@@ -36,21 +36,17 @@ const createCard = (req, res, next) => {
 };
 
 const deleteCard = (req, res, next) => {
-  Card.findByIdAndRemove(req.params.cardId)
+  Card.findByIdAndDelete(req.params.cardId)
     .then((card) => {
-      if (card.owner.toString() !== req.user._id) {
-        next(new Forbidden(FORBIDDEN_MESSAGE));
-      }
-      if (!card) {
+      if (card == null) {
         throw new ResourceNotFound(INVALID_ID);
+      }
+      if (card.owner.toString() !== req.user._id) {
+        throw new Forbidden(FORBIDDEN_MESSAGE);
       }
       return res.send(card);
     })
-    .catch((err) => {
-      if (err.name === 'CastError') {
-        next(new BadRequest(INVALID_DATA));
-      } next(err);
-    });
+    .catch(next);
 };
 
 const likeCard = (req, res, next) => Card.findByIdAndUpdate(
