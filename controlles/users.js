@@ -46,7 +46,7 @@ const getMyInfo = (req, res, next) => {
 };
 
 const getUser = (req, res, next) => {
-  User.findById(req.params.id)
+  User.findById(req.params.userId)
     .then((user) => {
       if (user == null) {
         next(new ResourceNotFound(INVALID_DATA));

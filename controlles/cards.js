@@ -1,8 +1,7 @@
 const Card = require('../models/card');
-
 const BadRequest = require('../errors/BadRequest');
-const ServerError = require('../errors/ServerError');
 const Forbidden = require('../errors/Forbidden');
+const ResourceNotFound = require('../errors/ResourceNotFound');
 
 const {
   SERVER_ERROR,
@@ -10,6 +9,7 @@ const {
   INVALID_DATA,
   SERVER_ERROR_MESSAGE,
   FORBIDDEN_MESSAGE,
+  INVALID_ID,
 } = require('../constants/constants');
 
 const getCards = (req, res) => {
@@ -32,7 +32,6 @@ const createCard = (req, res, next) => {
       if (err.name === 'ValidationError') {
         next(new BadRequest(INVALID_DATA));
       } next(err);
-      next(new ServerError(SERVER_ERROR_MESSAGE));
     });
 };
 
@@ -42,13 +41,15 @@ const deleteCard = (req, res, next) => {
       if (card.owner.toString() !== req.user._id) {
         next(new Forbidden(FORBIDDEN_MESSAGE));
       }
+      if (!card) {
+        throw new ResourceNotFound(INVALID_ID);
+      }
       return res.send(card);
     })
     .catch((err) => {
       if (err.name === 'CastError') {
         next(new BadRequest(INVALID_DATA));
       } next(err);
-      next(new ServerError(SERVER_ERROR_MESSAGE));
     });
 };
 
@@ -57,12 +58,16 @@ const likeCard = (req, res, next) => Card.findByIdAndUpdate(
   { $addToSet: { likes: req.user._id } },
   { new: true },
 )
-  .then((card) => res.send(card))
+  .then((card) => {
+    if (!card) {
+      throw new ResourceNotFound(INVALID_ID);
+    }
+    res.send(card);
+  })
   .catch((err) => {
     if (err.name === 'CastError') {
       next(new BadRequest(INVALID_DATA));
     } next(err);
-    next(new ServerError(SERVER_ERROR_MESSAGE));
   });
 
 const dislikeCard = (req, res, next) => Card.findByIdAndUpdate(
@@ -70,12 +75,16 @@ const dislikeCard = (req, res, next) => Card.findByIdAndUpdate(
   { $pull: { likes: req.user._id } },
   { new: true },
 )
-  .then((card) => res.send(card))
+  .then((card) => {
+    if (!card) {
+      throw new ResourceNotFound(INVALID_ID);
+    }
+    res.send(card);
+  })
   .catch((err) => {
     if (err.name === 'CastError') {
       next(new BadRequest(INVALID_DATA));
     } next(err);
-    next(new ServerError(SERVER_ERROR_MESSAGE));
   });
 
 module.exports = {
