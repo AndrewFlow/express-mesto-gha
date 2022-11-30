@@ -8,6 +8,7 @@ const routerCards = require('./routes/cards');
 const routerMain = require('./routes/main');
 const { login, createUser } = require('./controlles/users');
 const auth = require('./middlewares/auth');
+const LastError = require('./errors/LastError');
 
 const app = express();
 
@@ -48,6 +49,8 @@ app.use('/', routerCards);
 app.use('/', routerMain);
 
 app.use(errors());
+
+app.use(LastError);
 
 app.listen(PORT, () => {
   console.log(`Запустили сервер на ${PORT} порту`);

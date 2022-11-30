@@ -1,11 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
-const BadRequest = require('../errors/BadRequest');
-const Unauthorized = require('../errors/Unauthorized');
-const ResourceNotFound = require('../errors/ResourceNotFound');
-const ServerError = require('../errors/ServerError');
-
 const {
   SERVER_ERROR,
   BAD_REQUEST,
@@ -15,7 +10,10 @@ const {
   SERVER_ERROR_MESSAGE,
   RESOURCE_NOT_FOUND_MESSAGE,
 } = require('../constants/constants');
-const Duplicate = require('../errors/Duplicate');
+
+const BadRequest = require('../errors/BadRequest');
+const ResourceNotFound = require('../errors/ResourceNotFound');
+const ConflictingRequest = require('../errors/ConflictingRequest');
 
 const getAllUsers = (req, res, next) => {
   User.find({})
@@ -81,15 +79,13 @@ const createUser = (req, res, next) => {
       avatar: user.avatar,
     }))
     .catch((err) => {
+      if (err.code === 11000) {
+        next(new ConflictingRequest('Данный Email уже используется.'));
+      }
       if (err.name === 'ValidationError') {
         next(new BadRequest(INVALID_DATA));
       }
-      if (err.code === 11000) {
-        next(new Duplicate('Имейл уже зарегестрирован'));
-      }
-      if (err.name === 'ServerError') {
-        next(new ServerError(SERVER_ERROR_MESSAGE));
-      }
+      next(err);
     });
 };
 
@@ -97,20 +93,13 @@ const login = (req, res, next) => {
   const { email, password } = req.body;
   return User.findUserByCredentials(email, password)
     .then((user) => {
-      if (user === null) {
-        throw new Unauthorized(INVALID_DATA);
-      } return bcrypt.compare(password, user.password)
-        .then((matched) => {
-          if (!matched) {
-            throw new Unauthorized(INVALID_DATA);
-          } const token = jwt.sign({ _id: user._id }, 'super-strong-secret', { expiresIn: '7d' });
-          res.cookie('jwt', token, {
-            maxAge: 604800,
-            httpOnly: true,
-            sameSite: true,
-          });
-          res.send({ token });
-        });
+      const token = jwt.sign({ _id: user._id }, 'super-strong-secret', { expiresIn: '7d' });
+      res.cookie('jwt', token, {
+        maxAge: 604800,
+        httpOnly: true,
+        sameSite: true,
+      });
+      res.send({ token });
     })
     .catch(next);
 };
@@ -123,9 +112,6 @@ const updateUser = (req, res, next) => {
     .catch((err) => {
       if (err.name === 'ValidationError' || err.name === 'CastError') {
         next(new BadRequest(INVALID_DATA));
-      }
-      if (err.name === 'ServerError') {
-        next(new ServerError(SERVER_ERROR_MESSAGE));
       }
     });
 };

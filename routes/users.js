@@ -12,7 +12,7 @@ router.get('/users/me', celebrate({
     about: Joi.string().min(2).max(30),
   }),
 }), getMyInfo);
-router.get('/users/:id', celebrate({
+router.get('/users/:userId', celebrate({
   params: Joi.object().keys({
     userId: Joi.string().hex().length(24),
   }),

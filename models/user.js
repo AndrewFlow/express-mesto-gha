@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 const validator = require('validator');
+const Unauthorized = require('../errors/Unauthorized');
 const {
   INVALID_DATA,
 } = require('../constants/constants');
@@ -51,12 +52,12 @@ userSchema.statics.findUserByCredentials = function findUserByCredentials(email,
   return this.findOne({ email }).select('+password')
     .then((user) => {
       if (!user) {
-        return Promise.reject(new Error(INVALID_DATA));
+        return Promise.reject(new Unauthorized(INVALID_DATA));
       }
       return bcrypt.compare(password, user.password)
         .then((matched) => {
           if (!matched) {
-            return Promise.reject(new Error(INVALID_DATA));
+            return Promise.reject(new Unauthorized(INVALID_DATA));
           }
           return user;
         });
