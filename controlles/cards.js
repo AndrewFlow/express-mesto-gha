@@ -4,19 +4,17 @@ const Forbidden = require('../errors/Forbidden');
 const ResourceNotFound = require('../errors/ResourceNotFound');
 
 const {
-  SERVER_ERROR,
   CREATED,
   INVALID_DATA,
-  SERVER_ERROR_MESSAGE,
   FORBIDDEN_MESSAGE,
   INVALID_ID,
 } = require('../constants/constants');
 
-const getCards = (req, res) => {
+const getCards = (req, res, next) => {
   Card.find({})
     .populate(['owner', 'likes'])
     .then((data) => res.send(data))
-    .catch(() => res.status(SERVER_ERROR).send({ message: SERVER_ERROR_MESSAGE }));
+    .catch(next);
 };
 
 const createCard = (req, res, next) => {
@@ -31,12 +29,14 @@ const createCard = (req, res, next) => {
     .catch((err) => {
       if (err.name === 'ValidationError') {
         next(new BadRequest(INVALID_DATA));
-      } next(err);
+      } else {
+        next(err);
+      }
     });
 };
 
 const deleteCard = (req, res, next) => {
-  Card.findByIdAndDelete(req.params.cardId)
+  Card.findById(req.params.cardId)
     .then((card) => {
       if (card == null) {
         throw new ResourceNotFound(INVALID_ID);
@@ -44,9 +44,19 @@ const deleteCard = (req, res, next) => {
       if (card.owner.toString() !== req.user._id) {
         throw new Forbidden(FORBIDDEN_MESSAGE);
       }
-      return res.send(card);
+      return Card.findByIdAndDelete(req.params.cardId)
+        .then(() => {
+          res.send(card);
+        })
+        .catch(next);
     })
-    .catch(next);
+    .catch((err) => {
+      if (err.name === 'CastError') {
+        next(new BadRequest(INVALID_ID));
+      } else {
+        next(err);
+      }
+    });
 };
 
 const likeCard = (req, res, next) => Card.findByIdAndUpdate(
@@ -63,7 +73,9 @@ const likeCard = (req, res, next) => Card.findByIdAndUpdate(
   .catch((err) => {
     if (err.name === 'CastError') {
       next(new BadRequest(INVALID_DATA));
-    } next(err);
+    } else {
+      next(err);
+    }
   });
 
 const dislikeCard = (req, res, next) => Card.findByIdAndUpdate(
@@ -80,7 +92,9 @@ const dislikeCard = (req, res, next) => Card.findByIdAndUpdate(
   .catch((err) => {
     if (err.name === 'CastError') {
       next(new BadRequest(INVALID_DATA));
-    } next(err);
+    } else {
+      next(err);
+    }
   });
 
 module.exports = {

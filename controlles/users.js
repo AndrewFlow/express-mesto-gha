@@ -2,12 +2,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 const {
-  SERVER_ERROR,
-  BAD_REQUEST,
   CREATED,
-  INVALID_ID,
   INVALID_DATA,
-  SERVER_ERROR_MESSAGE,
   RESOURCE_NOT_FOUND_MESSAGE,
 } = require('../constants/constants');
 
@@ -18,31 +14,22 @@ const ConflictingRequest = require('../errors/ConflictingRequest');
 const getAllUsers = (req, res, next) => {
   User.find({})
     .then((users) => {
-      if (!users) {
-        return next(new ResourceNotFound(RESOURCE_NOT_FOUND_MESSAGE));
-      } return res.send(users);
+      res.send(users);
     })
     .catch(next);
 };
 
 const getMyInfo = (req, res, next) => {
   User.findById(req.user._id)
+    // eslint-disable-next-line consistent-return
     .then((user) => {
       if (user == null) {
-        return next(new ResourceNotFound(RESOURCE_NOT_FOUND_MESSAGE));
-      } return res.send(user);
+        next(new ResourceNotFound(RESOURCE_NOT_FOUND_MESSAGE));
+      } else {
+        return res.send(user);
+      }
     })
-    .catch((err) => {
-      if (err.name === 'ValidationError') {
-        res.status(BAD_REQUEST).send({ message: INVALID_DATA });
-        return;
-      }
-      if (err.name === 'CastError') {
-        res.status(BAD_REQUEST).send({ message: INVALID_ID });
-        return;
-      }
-      res.status(SERVER_ERROR).send({ message: SERVER_ERROR_MESSAGE });
-    });
+    .catch(next);
 };
 
 const getUser = (req, res, next) => {
@@ -61,9 +48,6 @@ const createUser = (req, res, next) => {
   const {
     name, about, avatar, email, password,
   } = req.body;
-  if (!password) {
-    return res.status(BAD_REQUEST).send({ message: INVALID_DATA });
-  }
   bcrypt.hash(password, 10).then((hash) => User.create({
     name: name || undefined,
     about: about || undefined,
@@ -81,11 +65,11 @@ const createUser = (req, res, next) => {
     .catch((err) => {
       if (err.code === 11000) {
         next(new ConflictingRequest('Данный Email уже используется.'));
-      }
-      if (err.name === 'ValidationError') {
+      } else if (err.name === 'ValidationError') {
         next(new BadRequest(INVALID_DATA));
+      } else {
+        next(err);
       }
-      next(err);
     });
 };
 
@@ -112,6 +96,8 @@ const updateUser = (req, res, next) => {
     .catch((err) => {
       if (err.name === 'ValidationError' || err.name === 'CastError') {
         next(new BadRequest(INVALID_DATA));
+      } else {
+        next(err);
       }
     });
 };
@@ -124,7 +110,9 @@ const updateAvatar = (req, res, next) => {
     .catch((err) => {
       if (err.name === 'ValidationError' || err.name === 'CastError') {
         next(new BadRequest(INVALID_DATA));
-      } next(err);
+      } else {
+        next(err);
+      }
     });
 };
 
