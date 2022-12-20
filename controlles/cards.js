@@ -10,22 +10,15 @@ const {
   INVALID_ID,
 } = require('../constants/constants');
 
-const getCards = (req, res, next) => {
-  Card.find({})
-    .populate(['owner', 'likes'])
-    .then((data) => res.send(data))
-    .catch(next);
-};
-
 const createCard = (req, res, next) => {
-  const { _id } = req.user;
+  // const { _id } = req.user;
   const {
-    name, link, likes,
+    name, link,
   } = req.body;
   Card.create({
-    name, link, likes, owner: _id,
+    name, link, owner: req.user._id, // заменил просто _id. убрал likes
   })
-    .then((card) => res.status(CREATED).send({ data: card }))
+    .then((card) => res.status(CREATED).send(card))
     .catch((err) => {
       if (err.name === 'ValidationError') {
         next(new BadRequest(INVALID_DATA));
@@ -33,6 +26,12 @@ const createCard = (req, res, next) => {
         next(err);
       }
     });
+};
+
+const getInitialCards = (req, res, next) => {
+  Card.find({}).sort({ createdAt: -1 })
+    .then((data) => res.send(data))
+    .catch(next);
 };
 
 const deleteCard = (req, res, next) => {
@@ -98,7 +97,7 @@ const dislikeCard = (req, res, next) => Card.findByIdAndUpdate(
   });
 
 module.exports = {
-  getCards,
+  getInitialCards,
   createCard,
   deleteCard,
   likeCard,
