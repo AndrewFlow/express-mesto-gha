@@ -26,6 +26,8 @@ mongoose.connect('mongodb://localhost:27017/mestodb', {
 
 const options = {
   origin: [
+    'http://yandexpr15.nomoredomains.club',
+    'https://yandexpr15.nomoredomains.club',
     'http://51.250.102.3:3000',
     'https://51.250.102.3:3000',
     'http://localhost:3000',
